@@ -100,7 +100,8 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
 
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
-      showVoiceHint("当前浏览器不支持语音输入");
+      const secureTip = window.isSecureContext ? "请换 Chrome/Edge 浏览器试试" : "语音输入需要 HTTPS 或 localhost";
+      showVoiceHint(`当前浏览器不支持语音输入，${secureTip}`);
       return;
     }
 
@@ -293,7 +294,7 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
 
   return (
     <div className="w-full h-full flex flex-col bg-[#FAFBFE] overflow-hidden">
-      <div className="flex-1 overflow-y-auto pb-5">
+      <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
         {/* 品牌区 */}
         <div className="relative w-full flex flex-col items-center pt-12 pb-8">
           <div className="w-12 h-12 mb-3 flex items-center justify-center">
@@ -518,7 +519,7 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
       </div>
 
       {/* 底部按钮 */}
-      <div className="w-full px-6 pb-8 pt-4 bg-[#FAFBFE] flex-shrink-0">
+      <div className="sticky bottom-0 z-20 w-full px-6 pb-8 pt-4 bg-[#FAFBFE]/95 backdrop-blur border-t border-[rgba(99,102,241,0.06)] shadow-[0_-10px_24px_rgba(250,251,254,0.92)] flex-shrink-0">
         <button
           className={`w-full h-[52px] rounded-[14px] text-white text-[16px] font-semibold transition-all duration-300 active:scale-[0.97] ${
             hasInput

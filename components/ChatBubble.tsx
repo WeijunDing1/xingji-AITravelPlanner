@@ -60,6 +60,31 @@ interface Message {
   content: string;
 }
 
+interface ChatSpeechRecognitionEventLike {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal: boolean;
+      [index: number]: { transcript: string };
+    };
+  };
+}
+
+interface ChatSpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: ChatSpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+type ChatSpeechRecognitionConstructor = new () => ChatSpeechRecognitionLike;
+
 export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -67,7 +92,12 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceHint, setVoiceHint] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<ChatSpeechRecognitionLike | null>(null);
+  const voiceBaseInputRef = useRef("");
+  const voiceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 拖拽状态
   const [position, setPosition] = useState({ x: -1, y: -1 }); // -1 表示未初始化
@@ -94,6 +124,75 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const showVoiceHint = (message: string, autoHide = true) => {
+    if (voiceHintTimerRef.current) clearTimeout(voiceHintTimerRef.current);
+    setVoiceHint(message);
+    if (autoHide) {
+      voiceHintTimerRef.current = setTimeout(() => setVoiceHint(null), 1800);
+    }
+  };
+
+  const startVoiceInput = () => {
+    if (typeof window === "undefined" || isListening || loading) return;
+
+    const browserWindow = window as Window & {
+      SpeechRecognition?: ChatSpeechRecognitionConstructor;
+      webkitSpeechRecognition?: ChatSpeechRecognitionConstructor;
+    };
+    const Recognition = browserWindow.SpeechRecognition || browserWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      const secureTip = window.isSecureContext ? "请换 Chrome/Edge 浏览器试试" : "语音输入需要 HTTPS 或 localhost";
+      showVoiceHint("当前浏览器不支持语音输入，" + secureTip);
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = "zh-CN";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
+    voiceBaseInputRef.current = input.trimEnd();
+
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        transcript += event.results[i][0]?.transcript || "";
+      }
+      const base = voiceBaseInputRef.current;
+      setInput((base + (base && transcript ? " " : "") + transcript).slice(0, 300));
+    };
+
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      const message = event.error === "not-allowed" ? "请允许浏览器使用麦克风" : "语音识别失败，请重试";
+      showVoiceHint(message);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    try {
+      recognition.start();
+      setIsListening(true);
+      showVoiceHint("正在听，松开结束", false);
+    } catch {
+      setIsListening(false);
+      recognitionRef.current = null;
+      showVoiceHint("语音输入启动失败，请重试");
+    }
+  };
+
+  const stopVoiceInput = () => {
+    if (!recognitionRef.current) return;
+    recognitionRef.current.stop();
+    recognitionRef.current = null;
+    setIsListening(false);
+    showVoiceHint("已转成文字");
+  };
 
   // 拖拽处理
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -258,24 +357,58 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
           </div>
 
           {/* 输入框 */}
-          <div className="flex items-center gap-2 px-4 py-3 border-t border-[rgba(99,102,241,0.08)]">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-              placeholder="说说要改什么..."
-              className="flex-1 h-[40px] px-3 rounded-[12px] bg-[#F9FAFB] border border-[rgba(99,102,241,0.08)] text-[14px] text-[#1E1B4B] placeholder-[#9CA3AF] outline-none focus:border-[#6366F1] transition-colors"
-              disabled={loading}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className="h-[40px] px-4 rounded-[12px] text-white text-[14px] font-medium disabled:opacity-40 active:scale-95 transition-all"
-              style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}
-            >
-              发送
-            </button>
+          <div className="px-4 py-3 border-t border-[rgba(99,102,241,0.08)] bg-white">
+            {voiceHint && (
+              <div className={`mb-2 inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium ${
+                isListening ? "bg-[rgba(99,102,241,0.1)] text-[#6366F1]" : "bg-[#F3F4F6] text-[#6B7280]"
+              }`}>
+                {isListening && <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-pulse" />}
+                <span className="truncate">{voiceHint}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value.slice(0, 300))}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                placeholder="说说要改什么..."
+                className="min-w-0 flex-1 h-[42px] px-3 rounded-[12px] bg-[#F9FAFB] border border-[rgba(99,102,241,0.08)] text-[14px] text-[#1E1B4B] placeholder-[#9CA3AF] outline-none focus:border-[#6366F1] transition-colors"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                aria-label="按住语音输入"
+                title="按住语音输入"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  startVoiceInput();
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  stopVoiceInput();
+                }}
+                onPointerLeave={() => stopVoiceInput()}
+                onPointerCancel={() => stopVoiceInput()}
+                onContextMenu={(e) => e.preventDefault()}
+                disabled={loading}
+                className={`w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-[15px] transition-all active:scale-95 disabled:opacity-40 ${
+                  isListening
+                    ? "bg-[#6366F1] text-white shadow-[0_0_0_6px_rgba(99,102,241,0.12)]"
+                    : "bg-[#F4F3FF] text-[#6366F1] hover:bg-[#ECEBFF]"
+                }`}
+              >
+                🎙
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || loading}
+                className="h-[42px] px-4 rounded-[12px] text-white text-[14px] font-medium disabled:opacity-40 active:scale-95 transition-all"
+                style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}
+              >
+                发送
+              </button>
+            </div>
           </div>
         </div>
       )}
