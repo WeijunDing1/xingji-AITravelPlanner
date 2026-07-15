@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { TripPlan } from "@/lib/types";
@@ -299,7 +299,7 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className="absolute w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-[60] touch-none select-none"
+          className="absolute w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-[1000] touch-none select-none"
           style={{
             background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
             left: `${position.x}px`,
@@ -313,7 +313,7 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
 
       {/* 对话面板 */}
       {isOpen && (
-        <div className="absolute bottom-0 left-0 right-0 h-[55%] bg-white rounded-t-[20px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] z-[60] flex flex-col animate-[slideInUp_0.3s_ease-out]">
+        <div className="absolute bottom-0 left-0 right-0 h-[55%] bg-white rounded-t-[20px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] z-[1000] flex flex-col animate-[slideInUp_0.3s_ease-out]">
           {/* 标题栏 */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(99,102,241,0.08)]">
             <div className="flex items-center gap-2">
@@ -415,3 +415,4 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
     </>
   );
 }
+
