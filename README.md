@@ -1,6 +1,7 @@
 # TripCraft 行迹
 
 AI 旅行规划助手。输入旅行想法或上传攻略截图，生成包含日程、地图路线、预算明细和 AI 对话修改能力的完整旅行方案。
+项目链接：https://tripcraft-ai-travel-planner.vercel.app/
 
 ## 功能亮点
 
