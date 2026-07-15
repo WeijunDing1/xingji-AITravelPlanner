@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef } from "react";
 import { TripRequest } from "@/lib/types";
@@ -7,6 +7,7 @@ const TAG_GROUPS = [
   { key: "days", label: "天数", type: "single" as const, options: ["3天", "5天", "7天"], hasCustom: true, customSuffix: "天", customPlaceholder: "天数" },
   { key: "budget", label: "预算", type: "single" as const, options: ["¥3000", "¥5000", "¥8000", "不限"], hasCustom: false },
   { key: "people", label: "人数", type: "single" as const, options: ["独自旅行", "情侣出游", "家庭亲子", "朋友同行"], hasCustom: false },
+  { key: "travelStyles", label: "旅行性格", type: "multi" as const, options: ["早睡早起", "晚睡晚起", "高精力", "低精力", "慢节奏", "特种兵"], hasCustom: false },
   { key: "preferences", label: "偏好", type: "multi" as const, options: ["自然风光", "人文美食", "文艺小众", "刺激冒险", "休闲购物"], hasCustom: false },
 ];
 
@@ -20,6 +21,38 @@ interface ParsedImage {
   base64: string;  // full base64 for API
 }
 
+
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal: boolean;
+      [index: number]: { transcript: string };
+    };
+  };
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 interface ExtractedInfo {
   destinations: string[];
   attractions: string[];
@@ -37,15 +70,86 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
   const [images, setImages] = useState<ParsedImage[]>([]);
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
   const [parsing, setParsing] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceHint, setVoiceHint] = useState<string | null>(null);
   const [customDays, setCustomDays] = useState("");
   const [showCustomDays, setShowCustomDays] = useState(false);
   const [tags, setTags] = useState<Record<string, string | string[]>>({
     days: "",
     budget: "",
     people: "",
+    travelStyles: [],
     preferences: [],
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceBaseTextRef = useRef<string>("");
+  const voiceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+
+  const showVoiceHint = (message: string, autoHide = true) => {
+    if (voiceHintTimerRef.current) clearTimeout(voiceHintTimerRef.current);
+    setVoiceHint(message);
+    if (autoHide) {
+      voiceHintTimerRef.current = setTimeout(() => setVoiceHint(null), 1800);
+    }
+  };
+
+  const startVoiceInput = () => {
+    if (typeof window === "undefined" || isListening) return;
+
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      showVoiceHint("当前浏览器不支持语音输入");
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = "zh-CN";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
+    voiceBaseTextRef.current = text.trimEnd();
+
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        transcript += event.results[i][0]?.transcript || "";
+      }
+
+      const base = voiceBaseTextRef.current;
+      const nextText = `${base}${base && transcript ? " " : ""}${transcript}`.slice(0, 500);
+      setText(nextText);
+    };
+
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      const message = event.error === "not-allowed" ? "请允许浏览器使用麦克风" : "语音识别失败，请重试";
+      showVoiceHint(message);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    try {
+      recognition.start();
+      setIsListening(true);
+      showVoiceHint("正在听，松开结束", false);
+    } catch {
+      setIsListening(false);
+      showVoiceHint("语音输入启动失败，请重试");
+    }
+  };
+
+  const stopVoiceInput = () => {
+    if (!recognitionRef.current) return;
+
+    recognitionRef.current.stop();
+    recognitionRef.current = null;
+    setIsListening(false);
+    showVoiceHint("已转成文字");
+  };
 
   const handleTagClick = (groupKey: string, type: "single" | "multi", option: string) => {
     setTags((prev) => {
@@ -146,6 +250,7 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
     !!customDays ||
     !!tags.budget ||
     !!tags.people ||
+    (tags.travelStyles as string[]).length > 0 ||
     (tags.preferences as string[]).length > 0;
 
   const handleSubmit = () => {
@@ -178,6 +283,7 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
         days: daysValue || extractedInfo?.days || undefined,
         budget: budgetMap[tags.budget as string] || extractedInfo?.budget || undefined,
         travelers: peopleMap[tags.people as string] || undefined,
+        travelStyles: (tags.travelStyles as string[]).length > 0 ? (tags.travelStyles as string[]) : undefined,
         preferences: (tags.preferences as string[]).length > 0 ? (tags.preferences as string[]) : undefined,
       },
     };
@@ -219,18 +325,54 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
 
         <div className="px-6 flex flex-col">
           {/* 文本输入框 */}
-          <div className="relative w-full">
+          <div className="w-full rounded-[18px] bg-white border border-[rgba(99,102,241,0.08)] shadow-[0_8px_24px_rgba(99,102,241,0.04)] transition-all duration-300 focus-within:border-[#6366F1] focus-within:shadow-[0_0_0_4px_rgba(99,102,241,0.08),0_12px_28px_rgba(99,102,241,0.08)]">
             <textarea
-              className="w-full min-h-[100px] max-h-[160px] rounded-[16px] bg-white border border-[rgba(99,102,241,0.08)] p-4 text-[15px] text-[#1E1B4B] placeholder-[#9CA3AF] resize-none outline-none transition-all duration-300 focus:border-[#6366F1] focus:shadow-[0_0_0_4px_rgba(99,102,241,0.1)]"
+              className="w-full h-[128px] max-h-[180px] rounded-t-[18px] bg-transparent px-4 pt-4 pb-4 text-[15px] leading-[1.75] text-[#1E1B4B] placeholder-[#9CA3AF] resize-none outline-none"
               placeholder={"描述你的旅行想法...\n\n例如：5天大理丽江，情侣游，预算5000"}
               value={text}
               onChange={(e) => setText(e.target.value.slice(0, 500))}
             />
-            <span className="absolute right-4 bottom-4 text-[12px] text-[#9CA3AF] pointer-events-none">
-              {text.length}/500
-            </span>
+            <div className="h-[48px] mx-3 border-t border-[rgba(99,102,241,0.06)] pl-2 pr-0 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                {voiceHint ? (
+                  <div className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-3.5 py-1 text-[12px] font-medium ${
+                    isListening
+                      ? "bg-[rgba(99,102,241,0.1)] text-[#6366F1]"
+                      : "bg-[#F3F4F6] text-[#6B7280]"
+                  }`}>
+                    {isListening && <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-pulse" />}
+                    <span className="truncate">{voiceHint}</span>
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="text-[12px] text-[#9CA3AF] tabular-nums">{text.length}/500</span>
+                <button
+                  type="button"
+                  aria-label="按住语音输入"
+                  title="按住语音输入"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    startVoiceInput();
+                  }}
+                  onPointerUp={(e) => {
+                    e.preventDefault();
+                    stopVoiceInput();
+                  }}
+                  onPointerLeave={() => stopVoiceInput()}
+                  onPointerCancel={() => stopVoiceInput()}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-[15px] transition-all active:scale-95 ${
+                    isListening
+                      ? "bg-[#6366F1] text-white shadow-[0_0_0_7px_rgba(99,102,241,0.12)]"
+                      : "bg-[#F4F3FF] text-[#6366F1] hover:bg-[#ECEBFF]"
+                  }`}
+                >
+                  🎙
+                </button>
+              </div>
+            </div>
           </div>
-
           {/* 图片上传区 */}
           <div className="mt-3">
             <span className="text-[12px] text-[#9CA3AF] mb-2 block">参考攻略截图</span>
@@ -311,7 +453,7 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
                   {group.options.map((opt) => {
                     const isSelected =
                       group.type === "single"
-                        ? tags[group.key] === opt && !showCustomDays
+                        ? tags[group.key] === opt && !(group.key === "days" && showCustomDays)
                         : (tags[group.key] as string[]).includes(opt);
 
                     return (
@@ -354,11 +496,13 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
                   {group.hasCustom && showCustomDays && (
                     <div className="flex items-center h-[34px] rounded-full border border-[#6366F1] bg-white overflow-hidden shadow-[0_0_0_3px_rgba(99,102,241,0.1)]">
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         min="1"
                         max="30"
                         value={customDays}
-                        onChange={(e) => setCustomDays(e.target.value.slice(0, 2))}
+                        onChange={(e) => setCustomDays(e.target.value.replace(/\D/g, "").slice(0, 2))}
                         placeholder="输入"
                         autoFocus
                         className="w-[48px] h-full px-3 text-[13px] text-[#1E1B4B] text-center outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -391,3 +535,18 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

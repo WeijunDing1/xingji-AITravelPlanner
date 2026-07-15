@@ -1,4 +1,4 @@
-export interface TripRequest {
+﻿export interface TripRequest {
   description?: string;
   images?: string[];
   params?: {
@@ -7,6 +7,7 @@ export interface TripRequest {
     budget?: number;
     travelers?: number;
     preferences?: string[];
+    travelStyles?: string[];
   };
 }
 
@@ -69,3 +70,5 @@ export interface CompleteEvent {
 }
 
 export type SSEEvent = ProgressEvent | CompleteEvent;
+
+

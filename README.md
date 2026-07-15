@@ -56,3 +56,7 @@ Windows PowerShell 可以手动复制，或执行：
 Copy-Item .env.example .env.local
 ```
 
+## 注意
+
+`.env.local` 不要提交到 GitHub。项目中的 AI 生成、截图解析和地图能力依赖第三方 API Key。
+

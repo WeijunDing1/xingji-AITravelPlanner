@@ -1,7 +1,55 @@
-import { NextRequest } from "next/server";
-import { generateTripPlanStream } from "@/lib/ai";
+﻿import { NextRequest } from "next/server";
+import { generateTripPlanStream, repairTripPlanJson } from "@/lib/ai";
 import { TripRequest, TripPlan } from "@/lib/types";
 
+function normalizeTripPlan(plan: Partial<TripPlan>): TripPlan {
+  const days = Array.isArray(plan.days) ? plan.days : [];
+  const itemCosts = days.flatMap((day) => Array.isArray(day.items) ? day.items : []);
+
+  const calculated = itemCosts.reduce(
+    (sum, item) => {
+      const cost = Number(item.cost) || 0;
+      const transportCost = Number(item.transportToNext?.cost) || 0;
+
+      if (item.type === "hotel") sum.accommodation += cost;
+      else if (item.type === "restaurant") sum.food += cost;
+      else if (item.type === "attraction") sum.tickets += cost;
+      else if (item.type === "transport") sum.transport += cost;
+      else sum.other += cost;
+
+      sum.transport += transportCost;
+      return sum;
+    },
+    { transport: 0, accommodation: 0, food: 0, tickets: 0, other: 0 }
+  );
+
+  const sourceBudget = (plan.budget || {}) as Partial<TripPlan["budget"]>;
+  const budget = {
+    transport: Number(sourceBudget.transport) || calculated.transport,
+    accommodation: Number(sourceBudget.accommodation) || calculated.accommodation,
+    food: Number(sourceBudget.food) || calculated.food,
+    tickets: Number(sourceBudget.tickets) || calculated.tickets,
+    other: Number(sourceBudget.other) || calculated.other,
+    total: 0,
+    perPerson: 0,
+  };
+  budget.total = Number(sourceBudget.total) || budget.transport + budget.accommodation + budget.food + budget.tickets + budget.other;
+  budget.perPerson = Number(sourceBudget.perPerson) || budget.total;
+
+  return {
+    title: plan.title || "AI 旅行规划",
+    summary: plan.summary || "为你生成的旅行行程",
+    destination: plan.destination || "目的地",
+    days,
+    budget,
+  };
+}
+function assertRequestedDayCount(plan: TripPlan, requestedDays?: number) {
+  if (!requestedDays) return;
+  if (plan.days.length !== requestedDays) {
+    throw new Error(`行程生成不完整：你选择了 ${requestedDays} 天，但 AI 只生成了 ${plan.days.length} 天，请重新生成一次`);
+  }
+}
 export async function POST(req: NextRequest) {
   const body: TripRequest = await req.json();
 
@@ -67,11 +115,23 @@ export async function POST(req: NextRequest) {
         }
 
         const jsonStr = jsonMatch[1] || jsonMatch[0];
-        const plan: TripPlan = JSON.parse(jsonStr);
+        let plan: TripPlan;
 
+        try {
+          plan = normalizeTripPlan(JSON.parse(jsonStr));
+        } catch (parseError) {
+          const repairedJson = await repairTripPlanJson(
+            jsonStr,
+            parseError instanceof Error ? parseError.message : "Unknown JSON parse error"
+          );
+          plan = normalizeTripPlan(JSON.parse(repairedJson));
+        }
+
+        assertRequestedDayCount(plan, body.params?.days);
         send("complete", { plan });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "生成失败，请重试";
+        const isJsonError = error instanceof SyntaxError || (error instanceof Error && /JSON|parse|position/i.test(error.message));
+        const message = isJsonError ? "行程生成格式异常，请重新生成一次" : error instanceof Error ? error.message : "生成失败，请重试";
         send("error", { message });
       } finally {
         controller.close();
@@ -87,3 +147,9 @@ export async function POST(req: NextRequest) {
     },
   });
 }
+
+
+
+
+
+

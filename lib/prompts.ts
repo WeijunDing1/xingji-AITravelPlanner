@@ -1,4 +1,4 @@
-import { TripRequest } from "./types";
+﻿import { TripRequest } from "./types";
 
 export const SYSTEM_PROMPT = `你是一位经验丰富的旅行规划师，精通中国各地的景点、美食和交通。
 
@@ -123,11 +123,19 @@ export function buildUserPrompt(request: TripRequest): string {
   }
 
   if (request.params) {
-    const { destination, days, budget, travelers, preferences } = request.params;
+    const { destination, days, budget, travelers, preferences, travelStyles } = request.params;
     if (destination) parts.push(`目的地：${destination}`);
-    if (days) parts.push(`天数：${days}天`);
+    if (days) {
+      parts.push(`天数：${days}天`);
+      parts.push(`硬性要求：days 数组必须精确包含 ${days} 个元素，从 Day1 连续到 Day${days}，不得少于 ${days} 天，不得用省略号或概述代替后续天数。`);
+      if (days >= 14) parts.push("长行程要求：每一天保留 2-3 个核心安排即可，描述保持简短，但必须输出完整天数。");
+    }
     if (budget) parts.push(`总预算：¥${budget}`);
     if (travelers) parts.push(`出行人数：${travelers}人`);
+    if (travelStyles && travelStyles.length > 0) {
+      parts.push(`旅行性格：${travelStyles.join("、")}`);
+      parts.push("时间节奏要求：请根据旅行性格安排每天出发时间、夜间活动、午休/咖啡休息和日程密度。早睡早起适合上午重点景点，晚睡晚起避免过早出发并可安排夜市/夜景；高精力可安排更紧凑路线，低精力或慢节奏需减少换乘和留出休息时间。");
+    }
     if (preferences && preferences.length > 0) {
       parts.push(`偏好：${preferences.join("、")}`);
     }
@@ -139,3 +147,7 @@ export function buildUserPrompt(request: TripRequest): string {
 
   return parts.join("\n");
 }
+
+
+
+
