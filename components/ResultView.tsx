@@ -6,6 +6,15 @@ import ScheduleView from "./ScheduleView";
 import MapView from "./MapView";
 import BudgetView from "./BudgetView";
 import ChatBubble from "./ChatBubble";
+import {
+  CalendarIcon,
+  LinkIcon,
+  MapIcon,
+  RefreshIcon,
+  SaveIcon,
+  UploadIcon,
+  WalletIcon,
+} from "./JournalIcons";
 
 interface ResultViewProps {
   plan: TripPlan;
@@ -15,9 +24,9 @@ interface ResultViewProps {
 }
 
 const TABS = [
-  { id: "schedule", label: "📋 日程" },
-  { id: "map", label: "🗺 地图" },
-  { id: "budget", label: "💰 预算" },
+  { id: "schedule", label: "日程", icon: CalendarIcon },
+  { id: "map", label: "地图", icon: MapIcon },
+  { id: "budget", label: "预算", icon: WalletIcon },
 ] as const;
 
 function escapeHtml(value: string | number | undefined | null) {
@@ -75,19 +84,19 @@ function buildPrintableHtml(plan: TripPlan, travelers = 1) {
 <meta charset="utf-8" />
 <title>${escapeHtml(plan.title)}</title>
 <style>
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;margin:0;background:#f7f7fb;color:#1f2450;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;margin:0;background:#d4bd90;color:#201d18;}
   .page{max-width:900px;margin:0 auto;padding:40px 44px;background:#fff;}
-  h1{font-size:30px;line-height:1.25;margin:0;color:#5b5ff0;}
+  h1{font-size:30px;line-height:1.25;margin:0;color:#201d18;}
   .meta{margin:10px 0 24px;color:#6b7280;font-size:14px;}
-  .summary{padding:16px 18px;border-radius:14px;background:#f4f3ff;margin-bottom:22px;color:#37326c;}
+  .summary{padding:16px 18px;border-radius:6px;background:#efe0bd;margin-bottom:22px;color:#201d18;border:1px solid #9f8b69;}
   .budget{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:26px;}
   .budget div{padding:12px;border-radius:12px;background:#fafafa;border:1px solid #eee;}
   .budget span{display:block;color:#8b8fa3;font-size:12px;margin-bottom:4px;}
-  h2{font-size:18px;margin:26px 0 12px;color:#1f2450;}
+  h2{font-size:18px;margin:26px 0 12px;color:#201d18;}
   table{width:100%;border-collapse:collapse;font-size:12px;}
   th,td{border:1px solid #e5e7eb;padding:8px;vertical-align:top;text-align:left;}
-  th{background:#f4f3ff;color:#4f46e5;}
-  tr:nth-child(even) td{background:#fcfcff;}
+  th{background:#d6bd8d;color:#201d18;}
+  tr:nth-child(even) td{background:#fbf4e4;}
   @media print{body{background:#fff}.page{padding:20px;max-width:none}.no-print{display:none}}
 </style>
 </head>
@@ -116,6 +125,61 @@ function buildPrintableHtml(plan: TripPlan, travelers = 1) {
 </html>`;
 }
 
+function buildExcelHtml(plan: TripPlan, travelers = 1) {
+  const rows = buildPlanRows(plan);
+  const budget = plan.budget;
+  const meta = `${plan.destination} · ${plan.days.length}天 · 预计 ¥${budget.total.toLocaleString()}${
+    travelers > 1 ? ` · 人均 ¥${Math.round(budget.total / travelers).toLocaleString()}` : ""
+  }`;
+  const budgetRows = [
+    ["交通", budget.transport],
+    ["住宿", budget.accommodation],
+    ["餐饮", budget.food],
+    ["门票", budget.tickets],
+    ["其他", budget.other],
+    ["总计", budget.total],
+  ];
+
+  return `<!doctype html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head>
+<meta charset="utf-8" />
+<title>${escapeHtml(plan.title)}</title>
+<style>
+  body{margin:0;background:#fbf4e4;color:#2b2721;font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;}
+  table{width:100%;border-collapse:collapse;table-layout:fixed;background:#fbf4e4;color:#2b2721;font-size:12px;}
+  td,th{border:1px solid #8b7758;padding:8px 9px;vertical-align:top;text-align:left;line-height:1.5;}
+  .title{background:#dfc99d;color:#211d18;font-family:"Songti SC","STSong","SimSun",serif;font-size:24px;font-weight:700;padding:14px 12px;}
+  .meta{background:#f1e4c9;color:#5b5042;font-size:13px;}
+  .summary{background:#fbf4e4;color:#383128;white-space:normal;}
+  .section{background:#c9aa74;color:#201d18;font-family:"Songti SC","STSong","SimSun",serif;font-size:16px;font-weight:700;}
+  .budget-label{background:#ead9b7;color:#5c4d39;font-weight:700;}
+  .budget-value{background:#fbf4e4;color:#201d18;font-weight:600;}
+  th{background:#d2b47f;color:#201d18;font-weight:700;}
+  .row-even td{background:#f3e7cf;}
+  .row-odd td{background:#fbf4e4;}
+  small{color:#6d6253;}
+</style>
+</head>
+<body>
+  <table>
+    <colgroup>
+      <col style="width:12%" /><col style="width:9%" /><col style="width:23%" />
+      <col style="width:31%" /><col style="width:9%" /><col style="width:16%" />
+    </colgroup>
+    <tr><td class="title" colspan="6">${escapeHtml(plan.title)}</td></tr>
+    <tr><td class="meta" colspan="6">${escapeHtml(meta)}</td></tr>
+    <tr><td class="summary" colspan="6">${escapeHtml(plan.summary)}</td></tr>
+    <tr><td class="section" colspan="6">预算概览</td></tr>
+    ${budgetRows.map(([label, value], index) => `<tr><td class="budget-label">${escapeHtml(label)}</td><td class="budget-value" colspan="5">¥${Number(value).toLocaleString()}${index === budgetRows.length - 1 ? "（预计总额）" : ""}</td></tr>`).join("")}
+    <tr><td class="section" colspan="6">行程明细</td></tr>
+    <tr><th>日期</th><th>时间</th><th>地点</th><th>说明</th><th>费用</th><th>交通</th></tr>
+    ${rows.map((row, index) => `<tr class="${index % 2 === 0 ? "row-odd" : "row-even"}"><td>${escapeHtml(row.day)}<br/><small>${escapeHtml(row.theme)}</small></td><td>${escapeHtml(row.time)}</td><td>${escapeHtml(row.name)}<br/><small>${escapeHtml(row.address)}</small></td><td>${escapeHtml(row.description)}</td><td>¥${escapeHtml(row.cost)}</td><td>${escapeHtml(row.transport)}</td></tr>`).join("")}
+  </table>
+</body>
+</html>`;
+}
+
 function exportPdf(plan: TripPlan, travelers?: number) {
   const win = window.open("", "_blank");
   if (!win) return false;
@@ -127,7 +191,7 @@ function exportPdf(plan: TripPlan, travelers?: number) {
 }
 
 function exportExcel(plan: TripPlan, travelers?: number) {
-  const html = buildPrintableHtml(plan, travelers || 1);
+  const html = buildExcelHtml(plan, travelers || 1);
   const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8" });
   downloadBlob(blob, `${safeFileName(plan.title)}.xls`);
 }
@@ -178,18 +242,18 @@ function exportImage(plan: TripPlan, travelers?: number) {
   if (!ctx) return false;
 
   const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, "#F8FAFF");
-  gradient.addColorStop(1, "#F1EEFF");
+  gradient.addColorStop(0, "#EFE0BD");
+  gradient.addColorStop(1, "#D6BD8D");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = "#6366F1";
+  ctx.fillStyle = "#201D18";
   ctx.font = "700 42px Microsoft YaHei, sans-serif";
   wrapCanvasText(ctx, plan.title, 64, 86, 820, 54, 2);
   ctx.fillStyle = "#6B7280";
   ctx.font = "24px Microsoft YaHei, sans-serif";
   ctx.fillText(`${plan.destination} · ${plan.days.length}天 · 预计 ¥${plan.budget.total.toLocaleString()}${travelers && travelers > 1 ? ` · 人均 ¥${Math.round(plan.budget.total / travelers).toLocaleString()}` : ""}`, 64, 188);
-  ctx.fillStyle = "#1E1B4B";
+  ctx.fillStyle = "#201D18";
   ctx.font = "24px Microsoft YaHei, sans-serif";
   wrapCanvasText(ctx, plan.summary, 64, 238, 900, 34, 2);
 
@@ -197,11 +261,11 @@ function exportImage(plan: TripPlan, travelers?: number) {
   plan.days.forEach((day) => {
     const visibleItems = day.items.slice(0, 5);
     const cardHeight = 92 + visibleItems.length * 86;
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = "#FBF4E4";
     roundRect(ctx, 48, y, width - 96, cardHeight, 28);
     ctx.fill();
 
-    ctx.fillStyle = "#6366F1";
+    ctx.fillStyle = "#927044";
     ctx.font = "700 28px Microsoft YaHei, sans-serif";
     ctx.fillText(`Day ${day.day}`, 82, y + 52);
     ctx.fillStyle = "#6B7280";
@@ -210,14 +274,14 @@ function exportImage(plan: TripPlan, travelers?: number) {
 
     let itemY = y + 102;
     visibleItems.forEach((item) => {
-      ctx.fillStyle = "#EEF2FF";
+      ctx.fillStyle = "#D6BD8D";
       roundRect(ctx, 82, itemY - 28, 86, 42, 20);
       ctx.fill();
-      ctx.fillStyle = "#4F46E5";
+      ctx.fillStyle = "#201D18";
       ctx.font = "700 20px Microsoft YaHei, sans-serif";
       ctx.fillText(item.time || "--:--", 104, itemY);
 
-      ctx.fillStyle = "#1E1B4B";
+      ctx.fillStyle = "#201D18";
       ctx.font = "700 24px Microsoft YaHei, sans-serif";
       wrapCanvasText(ctx, item.name, 190, itemY, 760, 30, 1);
       ctx.fillStyle = "#6B7280";
@@ -283,68 +347,72 @@ export default function ResultView({ plan, onBack, onPlanUpdate, travelers }: Re
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#FAFBFE] overflow-hidden">
+    <div className="journal-result w-full h-full flex flex-col overflow-hidden">
       {/* 导航栏 */}
-      <div className="sticky top-0 z-50 w-full h-14 flex items-center justify-between px-5 bg-[rgba(255,255,255,0.72)] backdrop-blur-[20px] border-b border-[rgba(99,102,241,0.08)]">
+      <div className="journal-result-header sticky top-0 z-50 w-full h-14 flex items-center justify-between px-5 border-b">
         <button
           onClick={onBack}
           className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-[14px] active:scale-95 transition-transform"
         >
           ←
         </button>
-        <h1 className="text-[16px] font-semibold text-[#1E1B4B]">
+        <h1 className="text-[16px] font-semibold text-[var(--ink)]">
           {plan.destination}
         </h1>
         <button
           onClick={() => toast("链接已复制")}
           className="w-8 h-8 flex items-center justify-center text-[16px] active:scale-95 transition-transform"
         >
-          🔗
+          <LinkIcon className="w-[18px] h-[18px]" />
         </button>
       </div>
 
       {/* 摘要卡 */}
-      <div className="relative w-full px-5 py-4 bg-white">
-        <h2 className="text-[20px] font-bold tracking-wide bg-clip-text text-transparent bg-gradient-to-br from-[#6366F1] to-[#8B5CF6]">
+      <div className="journal-result-summary relative w-full px-5 py-4 bg-white">
+        <h2 className="journal-result-title text-[20px] font-bold">
           {plan.title}
         </h2>
-        <div className="mt-1.5 text-[14px] text-[#6B7280]">
+        <div className="mt-1.5 text-[14px] text-[var(--ink-soft)]">
           预计{" "}
-          <span className="text-[#F59E0B] font-medium">
+          <span className="text-[var(--khaki-dark)] font-medium">
             ¥{budget.total.toLocaleString()}
           </span>
           {travelers && travelers > 1 && (
-            <span className="text-[#9CA3AF]"> · 人均 ¥{Math.round(budget.total / travelers).toLocaleString()}</span>
+            <span className="text-[var(--ink-muted)]"> · 人均 ¥{Math.round(budget.total / travelers).toLocaleString()}</span>
           )}
         </div>
-        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[rgba(99,102,241,0.3)] to-transparent" />
+        <div className="absolute bottom-0 left-0 w-full h-px bg-[var(--line)]" />
       </div>
 
       {/* Tab 栏 */}
-      <div className="sticky top-14 z-40 w-full bg-[rgba(255,255,255,0.72)] backdrop-blur-[20px] border-b border-[rgba(99,102,241,0.08)]">
+      <div className="journal-tabs sticky top-14 z-40 w-full border-b">
         <div className="relative flex">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 h-11 text-[14px] transition-colors duration-300 ${
+              data-active={activeTab === tab.id}
+              className={`journal-tab flex-1 h-11 text-[14px] transition-colors duration-300 ${
                 activeTab === tab.id
-                  ? "text-[#6366F1] font-semibold"
-                  : "text-[#6B7280]"
+                  ? "font-semibold"
+                  : ""
               }`}
             >
-              {tab.label}
+              <span className="inline-flex items-center justify-center gap-1.5">
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </span>
             </button>
           ))}
           <div
-            className="absolute bottom-0 h-[3px] rounded-t-[3px] transition-all duration-300 ease-out"
+            className="journal-tab-indicator absolute bottom-0 h-[3px] rounded-t-[3px] transition-all duration-300 ease-out"
             style={{
               width: `${100 / TABS.length}%`,
               transform: `translateX(${activeIndex * 100}%)`,
-              background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
+              background: "var(--ink)",
             }}
           >
-            <div className="absolute inset-0 bg-[#6366F1] blur-[4px] opacity-50" />
+            <div className="absolute inset-0 bg-[var(--ink)] opacity-20" />
           </div>
         </div>
       </div>
@@ -357,35 +425,38 @@ export default function ResultView({ plan, onBack, onPlanUpdate, travelers }: Re
       </div>
 
       {showExportMenu && (
-        <div className="absolute left-5 right-5 bottom-[86px] z-[80] rounded-2xl border border-[rgba(99,102,241,0.12)] bg-white p-2 shadow-[0_16px_40px_rgba(31,27,75,0.16)]">
+        <div className="absolute left-5 right-5 bottom-[86px] z-[80] rounded-lg border border-[var(--line)] bg-[var(--paper-light)] p-2 shadow-[4px_5px_0_rgba(58,46,31,0.14)]">
           <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => handleExport("pdf")} className="h-12 rounded-xl bg-[#F4F3FF] text-[#6366F1] text-[13px] font-semibold active:scale-95 transition-transform">📄 PDF</button>
-            <button onClick={() => handleExport("excel")} className="h-12 rounded-xl bg-[#F0FDF4] text-[#059669] text-[13px] font-semibold active:scale-95 transition-transform">📊 Excel</button>
-            <button onClick={() => handleExport("image")} className="h-12 rounded-xl bg-[#FFF7ED] text-[#D97706] text-[13px] font-semibold active:scale-95 transition-transform">🖼 图片</button>
+            <button onClick={() => handleExport("pdf")} className="h-12 rounded-md border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] text-[13px] font-semibold active:scale-95 transition-transform">PDF</button>
+            <button onClick={() => handleExport("excel")} className="h-12 rounded-md border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] text-[13px] font-semibold active:scale-95 transition-transform">Excel</button>
+            <button onClick={() => handleExport("image")} className="h-12 rounded-md border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] text-[13px] font-semibold active:scale-95 transition-transform">图片</button>
           </div>
         </div>
       )}
 
       {/* 底部操作栏 */}
-      <div className="w-full h-[76px] bg-[rgba(255,255,255,0.72)] backdrop-blur-[20px] border-t border-[rgba(99,102,241,0.08)] px-5 flex items-center justify-between gap-2 pb-[15px]">
+      <div className="journal-bottom-bar w-full h-[76px] border-t px-5 flex items-center justify-between gap-2 pb-[15px]">
         <button
           onClick={onBack}
-          className="flex-1 h-[46px] rounded-xl bg-white border border-[#6366F1] text-[#6366F1] font-medium text-[13px] active:scale-95 transition-transform"
+          className="journal-action flex-1 h-[46px] font-medium text-[13px] active:scale-95 transition-transform inline-flex items-center justify-center gap-1.5"
         >
-          🔄 重生成
+          <RefreshIcon className="w-4 h-4" />
+          重生成
         </button>
         <button
           onClick={() => setShowExportMenu((value) => !value)}
-          className="flex-1 h-[46px] rounded-xl bg-white border border-[rgba(99,102,241,0.18)] text-[#6366F1] font-medium text-[13px] active:scale-95 transition-transform"
+          className="journal-action flex-1 h-[46px] font-medium text-[13px] active:scale-95 transition-transform inline-flex items-center justify-center gap-1.5"
         >
-          📤 导出
+          <UploadIcon className="w-4 h-4" />
+          导出
         </button>
         <button
           onClick={() => toast("行程已保存")}
-          className="flex-1 h-[46px] rounded-xl text-white font-medium text-[13px] shadow-sm active:scale-95 transition-transform"
-          style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}
+          className="journal-action journal-action-primary flex-1 h-[46px] rounded-xl text-white font-medium text-[13px] shadow-sm active:scale-95 transition-transform inline-flex items-center justify-center gap-1.5"
+          style={{ background: "var(--ink)" }}
         >
-          💾 保存
+          <SaveIcon className="w-4 h-4" />
+          保存
         </button>
       </div>
 

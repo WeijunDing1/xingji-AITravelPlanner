@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { TripRequest } from "@/lib/types";
+import { CameraIcon, MicIcon, PlaneIcon, SparkIcon } from "./JournalIcons";
 
 const TAG_GROUPS = [
   { key: "days", label: "天数", type: "single" as const, options: ["3天", "5天", "7天"], hasCustom: true, customSuffix: "天", customPlaceholder: "天数" },
@@ -293,61 +294,44 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#FAFBFE] overflow-hidden">
-      <div className="flex-1 overflow-y-auto pb-28 overscroll-contain">
+    <div className="journal-home w-full h-full flex flex-col overflow-hidden">
+      <div className="journal-home-content flex-1 overflow-y-auto overscroll-contain">
         {/* 品牌区 */}
-        <div className="relative w-full flex flex-col items-center pt-12 pb-8">
-          <div className="w-12 h-12 mb-3 flex items-center justify-center">
-            <svg viewBox="0 0 48 48" fill="none" className="w-12 h-12">
-              <defs>
-                <linearGradient id="plane-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#6366F1" />
-                  <stop offset="100%" stopColor="#8B5CF6" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M24 6L32 18H40C42.2091 18 44 19.7909 44 22C44 24.2091 42.2091 26 40 26H32L24 38L18 38L22 26H12L8 30L4 30L6 22L4 14L8 14L12 18H22L18 6L24 6Z"
-                fill="url(#plane-grad)"
-              />
-              <path
-                d="M8 42C14 42 20 40 24 38"
-                stroke="url(#plane-grad)"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeDasharray="4 4"
-              />
-            </svg>
+        <div className="journal-brand relative w-full flex flex-col items-center pt-12 pb-8">
+          <div className="journal-logo w-12 h-12 mb-3 flex items-center justify-center">
+            <PlaneIcon className="w-12 h-12" />
           </div>
-          <h1 className="text-[24px] font-bold tracking-wide bg-clip-text text-transparent bg-gradient-to-br from-[#6366F1] to-[#8B5CF6]">
+          <h1 className="journal-title text-[24px] font-bold">
             行迹
           </h1>
-          <p className="text-[13px] text-[#6B7280] mt-1">AI 旅行规划师</p>
+          <p className="journal-subtitle text-[13px] mt-1">旅行计划手账</p>
         </div>
 
-        <div className="px-6 flex flex-col">
+        <div className="journal-home-main px-6 flex flex-col">
+          <div className="journal-home-compose">
           {/* 文本输入框 */}
-          <div className="w-full rounded-[18px] bg-white border border-[rgba(99,102,241,0.08)] shadow-[0_8px_24px_rgba(99,102,241,0.04)] transition-all duration-300 focus-within:border-[#6366F1] focus-within:shadow-[0_0_0_4px_rgba(99,102,241,0.08),0_12px_28px_rgba(99,102,241,0.08)]">
+          <div className="journal-input w-full transition-all duration-300">
             <textarea
-              className="w-full h-[128px] max-h-[180px] rounded-t-[18px] bg-transparent px-4 pt-4 pb-4 text-[15px] leading-[1.75] text-[#1E1B4B] placeholder-[#9CA3AF] resize-none outline-none"
+              className="w-full h-[128px] max-h-[180px] rounded-t-[7px] bg-transparent px-4 pt-4 pb-4 text-[15px] leading-[1.75] resize-none outline-none"
               placeholder={"描述你的旅行想法...\n\n例如：5天大理丽江，情侣游，预算5000"}
               value={text}
               onChange={(e) => setText(e.target.value.slice(0, 500))}
             />
-            <div className="h-[48px] mx-3 border-t border-[rgba(99,102,241,0.06)] pl-2 pr-0 flex items-center justify-between gap-3">
+            <div className="h-[48px] mx-3 border-t border-[var(--line)] pl-2 pr-0 flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 {voiceHint ? (
                   <div className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-3.5 py-1 text-[12px] font-medium ${
                     isListening
-                      ? "bg-[rgba(99,102,241,0.1)] text-[#6366F1]"
-                      : "bg-[#F3F4F6] text-[#6B7280]"
+                      ? "bg-[var(--paper-deep)] text-[var(--ink)]"
+                      : "bg-[var(--paper)] text-[var(--ink-soft)]"
                   }`}>
-                    {isListening && <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-pulse" />}
+                    {isListening && <span className="w-1.5 h-1.5 rounded-full bg-[var(--ink)] animate-pulse" />}
                     <span className="truncate">{voiceHint}</span>
                   </div>
                 ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-[12px] text-[#9CA3AF] tabular-nums">{text.length}/500</span>
+                <span className="text-[12px] text-[var(--ink-muted)] tabular-nums">{text.length}/500</span>
                 <button
                   type="button"
                   aria-label="按住语音输入"
@@ -363,24 +347,25 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
                   onPointerLeave={() => stopVoiceInput()}
                   onPointerCancel={() => stopVoiceInput()}
                   onContextMenu={(e) => e.preventDefault()}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-[15px] transition-all active:scale-95 ${
+                  data-listening={isListening}
+                  className={`journal-mic w-9 h-9 rounded-full flex items-center justify-center text-[15px] transition-all active:scale-95 ${
                     isListening
-                      ? "bg-[#6366F1] text-white shadow-[0_0_0_7px_rgba(99,102,241,0.12)]"
-                      : "bg-[#F4F3FF] text-[#6366F1] hover:bg-[#ECEBFF]"
+                      ? "text-white"
+                      : "text-[var(--ink)]"
                   }`}
                 >
-                  🎙
+                  <MicIcon className="w-[18px] h-[18px]" />
                 </button>
               </div>
             </div>
           </div>
           {/* 图片上传区 */}
           <div className="mt-3">
-            <span className="text-[12px] text-[#9CA3AF] mb-2 block">参考攻略截图</span>
+            <span className="text-[12px] text-[var(--ink-muted)] mb-2 block">参考攻略截图</span>
             <div className="flex items-center gap-3">
               {/* 已上传的缩略图 */}
               {images.map((img) => (
-                <div key={img.id} className="relative w-[72px] h-[72px] rounded-[12px] overflow-hidden flex-shrink-0 border border-[rgba(99,102,241,0.08)]">
+                <div key={img.id} className="relative w-[72px] h-[72px] rounded-[7px] overflow-hidden flex-shrink-0 border border-[var(--line)]">
                   <img src={img.preview} alt="" className="w-full h-full object-cover" />
                   <button
                     onClick={() => removeImage(img.id)}
@@ -390,7 +375,7 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
                   </button>
                   {parsing && (
                     <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-[#6366F1] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-[var(--ink)] border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
                 </div>
@@ -400,14 +385,14 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
               {images.length < 8 && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-[72px] h-[72px] rounded-[12px] border-2 border-dashed border-[rgba(99,102,241,0.15)] flex flex-col items-center justify-center bg-white hover:bg-[rgba(99,102,241,0.03)] transition-colors flex-shrink-0"
+                  className="journal-upload w-[72px] h-[72px] border-2 border-dashed flex flex-col items-center justify-center transition-colors flex-shrink-0"
                 >
-                  <span className="text-[20px] mb-0.5">📷</span>
-                  <span className="text-[10px] text-[#9CA3AF]">{images.length === 0 ? "添加截图" : "继续添加"}</span>
+                  <CameraIcon className="w-6 h-6 mb-1" />
+                  <span className="text-[10px] text-[var(--ink-muted)]">{images.length === 0 ? "添加截图" : "继续添加"}</span>
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-[#9CA3AF] mt-2">
+            <p className="text-[11px] text-[var(--ink-muted)] mt-2">
               支持小红书/抖音攻略截图，AI 自动提取景点和美食信息
             </p>
 
@@ -423,34 +408,35 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
 
           {/* 图片解析结果提示 */}
           {extractedInfo && !parsing && (
-            <div className="mt-3 p-3 rounded-[12px] bg-[rgba(99,102,241,0.04)] border border-[rgba(99,102,241,0.08)]">
+            <div className="mt-3 p-3 rounded-[7px] bg-[rgba(214,189,141,0.3)] border border-[var(--line)]">
               <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-[12px]">✨</span>
-                <span className="text-[12px] font-medium text-[#6366F1]">已识别攻略内容</span>
+                <SparkIcon className="w-4 h-4" />
+                <span className="text-[12px] font-medium text-[var(--ink)]">已识别攻略内容</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {extractedInfo.destinations.map((d, i) => (
-                  <span key={`d-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-[#6366F1] text-white">📍 {d}</span>
+                  <span key={`d-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--ink)] text-[var(--paper-light)]">地点 · {d}</span>
                 ))}
                 {extractedInfo.attractions.map((a, i) => (
-                  <span key={`a-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(99,102,241,0.1)] text-[#6366F1]">🏛 {a}</span>
+                  <span key={`a-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--paper-deep)] text-[var(--ink)]">景点 · {a}</span>
                 ))}
                 {extractedInfo.restaurants.map((r, i) => (
-                  <span key={`r-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(245,158,11,0.1)] text-[#D97706]">🍽 {r}</span>
+                  <span key={`r-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--paper-deep)] text-[var(--ink)]">餐饮 · {r}</span>
                 ))}
                 {extractedInfo.highlights.map((h, i) => (
-                  <span key={`h-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(16,185,129,0.1)] text-[#059669]">⭐ {h}</span>
+                  <span key={`h-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--paper-deep)] text-[var(--ink)]">体验 · {h}</span>
                 ))}
               </div>
             </div>
           )}
+          </div>
 
           {/* 快捷标签区 */}
-          <div className="mt-5 flex flex-col gap-4">
+          <div className="journal-home-filters mt-5 flex flex-col gap-4">
             {TAG_GROUPS.map((group) => (
               <div key={group.key} className="flex flex-col">
-                <span className="text-[12px] text-[#9CA3AF] mb-2">{group.label}</span>
-                <div className="flex flex-wrap gap-2 items-center">
+                <span className="journal-filter-label text-[12px] text-[#9CA3AF] mb-2">{group.label}</span>
+                <div data-tag-group={group.key} className="flex flex-wrap gap-2 items-center">
                   {group.options.map((opt) => {
                     const isSelected =
                       group.type === "single"
@@ -467,14 +453,15 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
                             setCustomDays("");
                           }
                         }}
-                        className={`h-[34px] px-3.5 rounded-full text-[13px] transition-all duration-300 active:scale-95 ${
+                        data-selected={isSelected}
+                        className={`journal-tag h-[34px] px-3.5 rounded-full text-[13px] transition-all duration-300 active:scale-95 ${
                           isSelected
-                            ? "text-white shadow-[0_2px_8px_rgba(99,102,241,0.3)]"
-                            : "bg-white border border-[rgba(99,102,241,0.12)] text-[#6B7280] hover:bg-[rgba(99,102,241,0.06)]"
+                            ? "text-white"
+                            : "text-[var(--ink-soft)]"
                         }`}
                         style={
                           isSelected
-                            ? { background: "linear-gradient(135deg, #6366F1, #8B5CF6)", borderColor: "transparent" }
+                            ? { background: "var(--ink)", borderColor: "var(--ink)" }
                             : {}
                         }
                       >
@@ -489,13 +476,13 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
                         setShowCustomDays(true);
                         setTags((prev) => ({ ...prev, days: "" }));
                       }}
-                      className="h-[34px] px-3.5 rounded-full text-[13px] bg-white border border-[rgba(99,102,241,0.12)] text-[#6B7280] hover:bg-[rgba(99,102,241,0.06)] transition-all duration-300 active:scale-95"
+                      className="journal-tag h-[34px] px-3.5 rounded-full text-[13px] transition-all duration-300 active:scale-95"
                     >
                       自定义
                     </button>
                   )}
                   {group.hasCustom && showCustomDays && (
-                    <div className="flex items-center h-[34px] rounded-full border border-[#6366F1] bg-white overflow-hidden shadow-[0_0_0_3px_rgba(99,102,241,0.1)]">
+                    <div className="flex items-center h-[34px] rounded-full border border-[var(--ink)] bg-[var(--paper-light)] overflow-hidden shadow-[0_0_0_3px_rgba(54,46,35,0.1)]">
                       <input
                         type="text"
                         inputMode="numeric"
@@ -519,18 +506,18 @@ export default function HomeView({ onSubmit }: HomeViewProps) {
       </div>
 
       {/* 底部按钮 */}
-      <div className="sticky bottom-0 z-20 w-full px-6 pb-8 pt-4 bg-[#FAFBFE]/95 backdrop-blur border-t border-[rgba(99,102,241,0.06)] shadow-[0_-10px_24px_rgba(250,251,254,0.92)] flex-shrink-0">
+      <div className="journal-footer sticky bottom-0 z-20 w-full px-6 pb-8 pt-4 border-t flex-shrink-0">
         <button
-          className={`w-full h-[52px] rounded-[14px] text-white text-[16px] font-semibold transition-all duration-300 active:scale-[0.97] ${
+          className={`journal-primary w-full h-[52px] rounded-[14px] text-white text-[16px] font-semibold transition-all duration-300 active:scale-[0.97] ${
             hasInput
-              ? "opacity-100 shadow-[0_4px_16px_rgba(99,102,241,0.08),0_12px_32px_rgba(99,102,241,0.12)] hover:-translate-y-[1px]"
+              ? "opacity-100 hover:-translate-y-[1px]"
               : "opacity-40 pointer-events-none"
           }`}
-          style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}
+          style={{ background: "var(--ink)" }}
           onClick={handleSubmit}
           disabled={parsing}
         >
-          {parsing ? "正在识别图片..." : "开始规划 ✨"}
+          {parsing ? "正在识别图片..." : "开始规划  →"}
         </button>
       </div>
     </div>

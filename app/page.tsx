@@ -83,13 +83,12 @@ export default function App() {
   }, []);
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center relative overflow-hidden bg-[#FAFBFE]">
-      {/* 装饰性背景 blob */}
-      <div className="fixed top-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-[#8B5CF6] opacity-[0.15] blur-[100px] pointer-events-none" />
-      <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-[#6366F1] opacity-[0.15] blur-[100px] pointer-events-none" />
+    <div className="travel-journal w-full min-h-screen flex items-center justify-center relative overflow-hidden">
+      <div className="paper-fleck paper-fleck-left" aria-hidden="true" />
+      <div className="paper-fleck paper-fleck-right" aria-hidden="true" />
 
       {/* 手机模拟器容器 */}
-      <div className="relative w-full max-w-[390px] h-[844px] bg-white rounded-[40px] shadow-[0_8px_24px_rgba(99,102,241,0.12),0_20px_48px_rgba(99,102,241,0.16)] overflow-hidden border-[6px] border-[#F3F4F6] flex flex-col">
+      <div data-phone-container className="paper-phone relative w-full max-w-[390px] h-[844px] overflow-hidden flex flex-col">
         <div className="flex-1 relative overflow-hidden">
           {currentPage === "home" && (
             <div className="w-full h-full animate-[fadeIn_0.4s_ease-out]">

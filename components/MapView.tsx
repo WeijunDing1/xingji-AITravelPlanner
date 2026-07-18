@@ -8,20 +8,20 @@ interface MapViewProps {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  attraction: "#6366F1",
-  restaurant: "#F59E0B",
-  hotel: "#10B981",
-  transport: "#6B7280",
+  attraction: "#29251f",
+  restaurant: "#a35f32",
+  hotel: "#5f704f",
+  transport: "#8a4f43",
 };
 
 const TYPE_ICONS: Record<string, string> = {
-  attraction: "🏛",
-  restaurant: "🍽",
-  hotel: "🏨",
-  transport: "🚗",
+  attraction: "景",
+  restaurant: "食",
+  hotel: "住",
+  transport: "行",
 };
 
-const DAY_COLORS = ["#6366F1", "#10B981", "#F59E0B", "#EC4899", "#06B6D4", "#8B5CF6", "#EF4444", "#84CC16"];
+const DAY_COLORS = ["#29251f", "#a16235", "#65734f", "#8e4f3f", "#536a70", "#735744", "#a07a38", "#505d49"];
 
 declare global {
   interface Window {
@@ -133,7 +133,7 @@ export default function MapView({ days }: MapViewProps) {
           strokeWeight: 2,
           strokeOpacity: 0.65,
           fillColor: color,
-          fillOpacity: 0.08,
+          fillOpacity: 0.12,
           zIndex: 8,
         });
         map.add(circle);
@@ -160,7 +160,7 @@ export default function MapView({ days }: MapViewProps) {
           border-radius:16px; padding:4px 9px;
           font-size:12px; font-weight:700;
           box-shadow:0 3px 10px rgba(0,0,0,0.22);
-          white-space:nowrap; border:2px solid white;
+          white-space:nowrap; border:2px solid #fbf4e4;
         `;
         content.innerHTML = `<span>Day${day.day}</span>`;
 
@@ -181,7 +181,7 @@ export default function MapView({ days }: MapViewProps) {
         if (!pos) return;
         path.push(pos);
 
-        const color = TYPE_COLORS[item.type] || "#6B7280";
+        const color = TYPE_COLORS[item.type] || "#5f574b";
         const icon = TYPE_ICONS[item.type] || "📍";
         const shortName = item.name.length > 5 ? item.name.slice(0, 5) + "…" : item.name;
 
@@ -191,8 +191,8 @@ export default function MapView({ days }: MapViewProps) {
           background:${color}; color:white;
           border-radius:14px; padding:3px 8px 3px 5px;
           font-size:11px; font-weight:600;
-          box-shadow:0 2px 6px rgba(0,0,0,0.2);
-          white-space:nowrap; border:2px solid white;
+          box-shadow:0 3px 8px rgba(32,29,24,0.3);
+          white-space:nowrap; border:2px solid #fbf4e4;
         `;
         content.innerHTML = `<span style="font-size:13px">${icon}</span><span>${idx + 1}.${shortName}</span>`;
 
@@ -209,7 +209,7 @@ export default function MapView({ days }: MapViewProps) {
       if (path.length > 1) {
         const polyline = new window.AMap.Polyline({
           path,
-          strokeColor: "#6366F1",
+          strokeColor: "#2b2822",
           strokeWeight: 4,
           strokeOpacity: 0.8,
           strokeStyle: "dashed",
@@ -236,19 +236,19 @@ export default function MapView({ days }: MapViewProps) {
   const totalStops = allItems.filter((item) => item.location?.lng && item.location?.lat).length;
 
   return (
-    <div className="relative flex-1 w-full h-full flex flex-col bg-white overflow-hidden">
+    <div className="journal-screen journal-map relative flex-1 w-full h-full flex flex-col overflow-hidden">
       {/* 地图容器 — 固定高度 */}
-      <div className="relative w-full flex-shrink-0 h-[340px] bg-[#E8F4F8]">
+      <div className="journal-map-canvas relative w-full flex-shrink-0 h-[340px]">
         <div ref={mapContainerRef} style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }} />
         {!mapReady && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#F5F7FF]">
-            <span className="text-[14px] text-[#6B7280] animate-pulse">地图加载中...</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--paper-deep)]">
+            <span className="text-[14px] text-[var(--ink-soft)] animate-pulse">地图加载中...</span>
           </div>
         )}
       </div>
 
       {/* 底部面板 */}
-      <div className="flex-1 w-full bg-white z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex flex-col relative pt-2 pb-4" style={{ borderRadius: "20px 20px 0 0", marginTop: "-16px" }}>
+      <div className="journal-map-panel flex-1 w-full z-10 flex flex-col relative pt-2 pb-4" style={{ borderRadius: "12px 12px 0 0", marginTop: "-12px" }}>
         <div className="w-full flex justify-center mb-3">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />
         </div>
@@ -258,10 +258,11 @@ export default function MapView({ days }: MapViewProps) {
           <div className="flex items-center gap-3 min-w-max">
             <button
               onClick={() => setActiveDay(-1)}
-              className={`flex-shrink-0 h-8 px-4 rounded-full text-[13px] font-medium transition-all duration-300 ${
+              data-selected={isOverview}
+              className={`journal-tag flex-shrink-0 h-8 px-4 rounded-full text-[13px] font-medium transition-all duration-300 ${
                 isOverview
-                  ? "bg-[#6366F1] text-white shadow-[0_2px_8px_rgba(99,102,241,0.3)]"
-                  : "bg-white border border-[rgba(99,102,241,0.08)] text-[#6B7280]"
+                  ? "text-white"
+                  : "text-[var(--ink-soft)]"
               }`}
             >
               总览
@@ -270,10 +271,11 @@ export default function MapView({ days }: MapViewProps) {
               <button
                 key={idx}
                 onClick={() => setActiveDay(idx)}
-                className={`flex-shrink-0 h-8 px-4 rounded-full text-[13px] font-medium transition-all duration-300 ${
+                data-selected={activeDay === idx}
+                className={`journal-tag flex-shrink-0 h-8 px-4 rounded-full text-[13px] font-medium transition-all duration-300 ${
                   activeDay === idx
-                    ? "bg-[#6366F1] text-white shadow-[0_2px_8px_rgba(99,102,241,0.3)]"
-                    : "bg-white border border-[rgba(99,102,241,0.08)] text-[#6B7280]"
+                    ? "text-white"
+                    : "text-[var(--ink-soft)]"
                 }`}
               >
                 Day{day.day}
@@ -283,9 +285,9 @@ export default function MapView({ days }: MapViewProps) {
         </div>
 
         {/* 统计 */}
-        <div className="px-5 pt-1">
-          <div className="w-full bg-gray-50 rounded-xl p-3">
-            <p className="text-[14px] text-gray-500 font-medium text-center">
+        <div className="journal-map-summary flex-1 min-h-0 overflow-y-auto px-5 pt-1">
+          <div className="w-full bg-[rgba(214,189,141,0.28)] border border-[var(--line)] rounded-md p-3">
+            <p className="text-[14px] text-[var(--ink-soft)] font-medium text-center">
               {isOverview ? `全程 ${days.length}天 · ${totalStops}个地点` : `总距离 ${(totalDistance / 1000).toFixed(1)}km`}
               {isOverview && totalDistance > 0 && ` · 约${(totalDistance / 1000).toFixed(1)}km`}
               {walkCount > 0 && ` · 步行${walkCount}段`}
@@ -295,15 +297,21 @@ export default function MapView({ days }: MapViewProps) {
             </p>
           </div>
           {isOverview ? (
-            <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+            <div className="journal-overview-days mt-3 flex flex-col gap-2 pb-2">
               {days.map((day, idx) => (
-                <span
+                <div
                   key={day.day}
-                  className="flex-shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium text-white"
-                  style={{ backgroundColor: DAY_COLORS[idx % DAY_COLORS.length] }}
+                  className="flex w-full items-start gap-2.5 rounded-md border border-[var(--line)] bg-[rgba(251,244,228,0.62)] px-3 py-2.5"
                 >
-                  Day{day.day} · {day.theme}
-                </span>
+                  <span
+                    className="mt-1 h-3 w-3 flex-shrink-0 rounded-full"
+                    style={{ backgroundColor: DAY_COLORS[idx % DAY_COLORS.length] }}
+                  />
+                  <span className="min-w-0 text-[12px] leading-[1.55] text-[var(--ink-soft)]">
+                    <strong className="mr-1 font-semibold text-[var(--ink)]">Day {day.day}</strong>
+                    {day.theme}
+                  </span>
+                </div>
               ))}
             </div>
           ) : currentDay ? (

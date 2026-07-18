@@ -20,7 +20,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#FAFBFE]">{children}</body>
+      <body className="min-h-full flex flex-col bg-[var(--canvas)]">{children}</body>
     </html>
   );
 }

@@ -3,17 +3,17 @@
 import React from "react";
 
 const TYPE_COLORS: Record<string, string> = {
-  attraction: "#6366F1",
-  restaurant: "#F59E0B",
-  hotel: "#10B981",
-  transport: "#6B7280",
+  attraction: "#4f473b",
+  restaurant: "#9a7a4d",
+  hotel: "#6f765d",
+  transport: "#756957",
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  attraction: "🏛 景点",
-  restaurant: "🍽 餐厅",
-  hotel: "🏨 住宿",
-  transport: "🚗 交通",
+  attraction: "景点",
+  restaurant: "餐厅",
+  hotel: "住宿",
+  transport: "交通",
 };
 
 interface PoiCardProps {
@@ -36,10 +36,10 @@ interface PoiCardProps {
 }
 
 const MODE_ICONS: Record<string, string> = {
-  walking: "🚶",
-  driving: "🚗",
-  transit: "🚌",
-  cycling: "🚲",
+  walking: "步行",
+  driving: "驾车",
+  transit: "公交",
+  cycling: "骑行",
 };
 
 export default function PoiCard({ data }: PoiCardProps) {
@@ -62,14 +62,14 @@ export default function PoiCard({ data }: PoiCardProps) {
 
   return (
     <div className="relative flex flex-col">
-      <div className="relative w-full bg-white rounded-[16px] shadow-[0_1px_3px_rgba(99,102,241,0.04),0_4px_12px_rgba(99,102,241,0.06)] p-4 overflow-hidden transition-all duration-300 hover:-translate-y-[1px] hover:shadow-[0_4px_16px_rgba(99,102,241,0.08),0_12px_32px_rgba(99,102,241,0.12)]">
+      <div className="journal-poi-card relative w-full p-4 overflow-hidden transition-all duration-300 hover:-translate-y-[1px]">
         <div
           className="absolute left-0 top-0 bottom-0 w-[4px]"
           style={{ backgroundColor: borderColor }}
         />
 
         <div className="flex justify-between items-start mb-2 gap-2">
-          <span className="text-[16px] font-bold text-[#1E1B4B] flex-1 min-w-0">{data.name}</span>
+          <span className="text-[16px] font-bold text-[var(--ink)] flex-1 min-w-0">{data.name}</span>
           <span
             className="text-[12px] px-2 py-0.5 rounded-full border opacity-90 whitespace-nowrap flex-shrink-0"
             style={{
@@ -82,23 +82,23 @@ export default function PoiCard({ data }: PoiCardProps) {
           </span>
         </div>
 
-        <p className="text-[13px] text-[#6B7280] mb-3 leading-relaxed">
+        <p className="text-[13px] text-[var(--ink-soft)] mb-3 leading-relaxed">
           {data.description}
         </p>
 
-        <div className="flex flex-wrap items-center gap-3 text-[12px] text-[#9CA3AF]">
-          {data.duration > 0 && <span>⏱ {formatDuration(data.duration)}</span>}
-          {data.rating && <span>⭐ {data.rating}</span>}
-          <span>💰 {formatCost(data.cost)}</span>
-          <span>📍 {data.location.address}</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] text-[var(--ink-muted)]">
+          {data.duration > 0 && <span>时长 · {formatDuration(data.duration)}</span>}
+          {data.rating && <span>评分 · {data.rating}</span>}
+          <span>费用 · {formatCost(data.cost)}</span>
+          <span>地址 · {data.location.address}</span>
         </div>
       </div>
 
       {data.transportToNext && (
-        <div className="flex items-center h-10 pl-6 text-[13px] text-[#9CA3AF]">
+        <div className="flex items-center h-10 pl-6 text-[13px] text-[var(--ink-muted)]">
           <div className="w-[2px] h-[30px] border-l-[2px] border-dashed border-[#9CA3AF] opacity-30 mr-4" />
           <span>
-            {MODE_ICONS[data.transportToNext.mode] || "🚶"}{" "}
+            {MODE_ICONS[data.transportToNext.mode] || "步行"}{" "}
             {formatDuration(data.transportToNext.duration)} ·{" "}
             {formatDistance(data.transportToNext.distance)}
             {data.transportToNext.cost > 0 && (

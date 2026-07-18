@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { PlaneIcon } from "./JournalIcons";
 
 interface LoadingViewProps {
   onComplete: () => void;
@@ -41,25 +42,15 @@ export default function LoadingView({ onComplete, stages }: LoadingViewProps) {
   };
 
   return (
-    <div
-      className="w-full h-full flex flex-col items-center pt-[22%]"
-      style={{ background: "radial-gradient(circle at center, #FAFBFE, #F0F0FE)" }}
-    >
+    <div className="paper-loading w-full h-full flex flex-col items-center pt-[22%]">
       {/* 旋转动画 */}
-      <div className="relative w-20 h-20 flex items-center justify-center">
-        <div
-          className="absolute inset-0 rounded-full animate-spin"
-          style={{
-            background: "conic-gradient(from 0deg, transparent, #6366F1, transparent)",
-            animationDuration: "1.5s",
-          }}
-        />
-        <div className="absolute w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
-          <span className="text-[32px] leading-none">✈️</span>
+      <div className="paper-loading-spinner relative w-20 h-20 flex items-center justify-center">
+        <div className="absolute w-16 h-16 bg-[var(--paper-light)] border border-[var(--line)] rounded-full flex items-center justify-center shadow-sm">
+          <PlaneIcon className="w-10 h-10" />
         </div>
       </div>
 
-      <h2 className="text-[18px] font-medium text-[#1E1B4B] mt-5 animate-pulse">
+      <h2 className="text-[18px] font-medium text-[var(--ink)] mt-5">
         正在为您规划完美行程...
       </h2>
 
@@ -73,14 +64,14 @@ export default function LoadingView({ onComplete, stages }: LoadingViewProps) {
             <div key={step.key} className="flex items-center h-11">
               <div className="w-5 flex items-center justify-center mr-3">
                 {isCompleted && (
-                  <div className="w-[18px] h-[18px] rounded-full bg-[#10B981] flex items-center justify-center animate-[scaleBounce_0.5s_ease-out]">
+                  <div className="w-[18px] h-[18px] rounded-full bg-[var(--olive)] flex items-center justify-center animate-[scaleBounce_0.5s_ease-out]">
                     <svg className="w-[10px] h-[10px] text-white" viewBox="0 0 12 12" fill="none">
                       <path d="M2.5 6.5L4.5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 )}
                 {isCurrent && (
-                  <div className="w-4 h-4 rounded-full border-2 border-t-[#6366F1] border-r-[#6366F1] border-b-transparent border-l-transparent animate-spin" />
+                  <div className="w-4 h-4 rounded-full border-2 border-t-[var(--ink)] border-r-[var(--ink)] border-b-transparent border-l-transparent animate-spin" />
                 )}
                 {!isCompleted && !isCurrent && (
                   <div className="w-4 h-4 rounded-full border-2 border-[#9CA3AF] opacity-50" />
@@ -89,10 +80,10 @@ export default function LoadingView({ onComplete, stages }: LoadingViewProps) {
               <span
                 className={`text-[14px] transition-colors duration-300 ${
                   isCompleted
-                    ? "text-[#1E1B4B]"
+                    ? "text-[var(--ink)]"
                     : isCurrent
-                    ? "text-[#6366F1] font-medium"
-                    : "text-[#9CA3AF]"
+                    ? "text-[var(--ink)] font-medium"
+                    : "text-[var(--ink-muted)]"
                 }`}
               >
                 {step.label}
@@ -103,7 +94,7 @@ export default function LoadingView({ onComplete, stages }: LoadingViewProps) {
       </div>
 
       {/* 时间提示 — 用已用时替代倒计时 */}
-      <div className="mt-8 text-[13px] text-[#9CA3AF] tabular-nums">
+      <div className="mt-8 text-[13px] text-[var(--ink-muted)] tabular-nums">
         {getTimeHint()}
       </div>
     </div>

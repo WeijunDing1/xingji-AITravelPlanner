@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { TripPlan } from "@/lib/types";
+import { CloseIcon, MicIcon, SparkIcon } from "./JournalIcons";
 
 function FormattedReply({ text }: { text: string }) {
   const lines = text.split("\n");
@@ -17,7 +18,7 @@ function FormattedReply({ text }: { text: string }) {
         if (listMatch) {
           return (
             <div key={i} className="flex gap-1.5 items-start">
-              <span className="text-[#6366F1] font-semibold flex-shrink-0 text-[12px] mt-[2px] w-4 text-center">{listMatch[1]}</span>
+              <span className="text-[var(--khaki-dark)] font-semibold flex-shrink-0 text-[12px] mt-[2px] w-4 text-center">{listMatch[1]}</span>
               <span>{renderInline(listMatch[2])}</span>
             </div>
           );
@@ -27,7 +28,7 @@ function FormattedReply({ text }: { text: string }) {
         if (trimmed.startsWith("- ") || trimmed.startsWith("· ")) {
           return (
             <div key={i} className="flex gap-1.5 items-start pl-1">
-              <span className="text-[#6366F1] mt-[6px] w-1.5 h-1.5 rounded-full bg-[#6366F1] flex-shrink-0" />
+              <span className="mt-[6px] w-1.5 h-1.5 rounded-full bg-[var(--khaki-dark)] flex-shrink-0" />
               <span>{renderInline(trimmed.slice(2))}</span>
             </div>
           );
@@ -44,7 +45,7 @@ function renderInline(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i} className="font-semibold text-[#1E1B4B]">{part.slice(2, -2)}</strong>;
+      return <strong key={i} className="font-semibold text-[var(--ink)]">{part.slice(2, -2)}</strong>;
     }
     return <span key={i}>{part}</span>;
   });
@@ -58,6 +59,11 @@ interface ChatBubbleProps {
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+interface PendingUpdate {
+  plan: TripPlan;
+  summary: string;
 }
 
 interface ChatSpeechRecognitionEventLike {
@@ -92,6 +98,7 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<PendingUpdate | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [voiceHint, setVoiceHint] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -107,23 +114,30 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
   const bubbleRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // 初始化位置（右下角）
+  // 根据当前应用容器尺寸定位，兼容手机、平板和桌面端。
   useEffect(() => {
-    if (position.x === -1) {
-      setPosition({ x: 310, y: 680 });
-    }
-  }, [position.x]);
+    const container = bubbleRef.current?.closest("[data-phone-container]") as HTMLDivElement | null;
+    if (!container) return;
 
-  // 获取父容器（手机模拟器）
-  useEffect(() => {
-    if (bubbleRef.current) {
-      containerRef.current = bubbleRef.current.closest("[data-phone-container]") as HTMLDivElement;
-    }
+    containerRef.current = container;
+    const fitPosition = () => {
+      const maxX = Math.max(8, container.clientWidth - 56);
+      const maxY = Math.max(8, container.clientHeight - 140);
+      setPosition((prev) => ({
+        x: prev.x < 0 ? maxX : Math.min(Math.max(8, prev.x), maxX),
+        y: prev.y < 0 ? maxY : Math.min(Math.max(8, prev.y), maxY),
+      }));
+    };
+
+    fitPosition();
+    const observer = new ResizeObserver(fitPosition);
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, pendingUpdate]);
 
   const showVoiceHint = (message: string, autoHide = true) => {
     if (voiceHintTimerRef.current) clearTimeout(voiceHintTimerRef.current);
@@ -134,7 +148,7 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
   };
 
   const startVoiceInput = () => {
-    if (typeof window === "undefined" || isListening || loading) return;
+    if (typeof window === "undefined" || isListening || loading || pendingUpdate) return;
 
     const browserWindow = window as Window & {
       SpeechRecognition?: ChatSpeechRecognitionConstructor;
@@ -209,9 +223,11 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
     let newX = e.clientX - dragStart.current.x;
     let newY = e.clientY - dragStart.current.y;
 
-    // 限制在容器内
-    newX = Math.max(0, Math.min(newX, 342)); // 390 - 48
-    newY = Math.max(0, Math.min(newY, 760)); // 844 - 76 - 48
+    const container = containerRef.current;
+    const maxX = Math.max(8, (container?.clientWidth || 390) - 56);
+    const maxY = Math.max(8, (container?.clientHeight || 844) - 140);
+    newX = Math.max(8, Math.min(newX, maxX));
+    newY = Math.max(8, Math.min(newY, maxY));
 
     setPosition({ x: newX, y: newY });
   }, []);
@@ -220,9 +236,10 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
     isDragging.current = false;
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
-    // 吸附到左右边缘
+    const width = containerRef.current?.clientWidth || 390;
+    const rightEdge = Math.max(8, width - 56);
     setPosition((prev) => ({
-      x: prev.x < 171 ? 8 : 334,
+      x: prev.x < width / 2 ? 8 : rightEdge,
       y: prev.y,
     }));
 
@@ -234,7 +251,7 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
 
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || loading || pendingUpdate) return;
 
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: text }]);
@@ -262,11 +279,11 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
           { role: "assistant", content: data.error },
         ]);
       } else if (data.type === "update" && data.plan) {
-        // 修改了行程
-        onPlanUpdate(data.plan);
+        const summary = data.summary || "已根据你的要求生成修改方案";
+        setPendingUpdate({ plan: data.plan, summary });
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: `${data.summary || "已完成修改"} ✅` },
+          { role: "assistant", content: `${summary}\n\n请确认后再应用到当前行程。` },
         ]);
       } else if (data.type === "chat") {
         // 纯对话回复
@@ -290,6 +307,25 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
     }
   };
 
+  const handleConfirmUpdate = () => {
+    if (!pendingUpdate) return;
+    onPlanUpdate(pendingUpdate.plan);
+    setPendingUpdate(null);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "修改已应用到当前行程。" },
+    ]);
+  };
+
+  const handleCancelUpdate = () => {
+    if (!pendingUpdate) return;
+    setPendingUpdate(null);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "已取消，本次修改没有应用。" },
+    ]);
+  };
+
   return (
     <>
       {/* 可拖拽悬浮球 */}
@@ -299,32 +335,32 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className="absolute w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-[1000] touch-none select-none"
+          className="journal-chat-bubble absolute w-12 h-12 rounded-full flex items-center justify-center shadow-lg z-[1000] touch-none select-none"
           style={{
-            background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
+            background: "var(--ink)",
             left: `${position.x}px`,
             top: `${position.y}px`,
             transition: isDragging.current ? "none" : "left 0.3s ease-out, top 0.1s ease-out",
           }}
         >
-          <span className="text-[20px] pointer-events-none">✨</span>
+          <SparkIcon className="w-[22px] h-[22px] pointer-events-none" />
         </button>
       )}
 
       {/* 对话面板 */}
       {isOpen && (
-        <div className="absolute bottom-0 left-0 right-0 h-[55%] bg-white rounded-t-[20px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] z-[1000] flex flex-col animate-[slideInUp_0.3s_ease-out]">
+        <div className="journal-chat-panel absolute bottom-0 left-0 right-0 h-[55%] bg-white rounded-t-[20px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] z-[1000] flex flex-col animate-[slideInUp_0.3s_ease-out]">
           {/* 标题栏 */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(99,102,241,0.08)]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)]">
             <div className="flex items-center gap-2">
-              <span className="text-[16px]">✨</span>
-              <span className="text-[15px] font-semibold text-[#1E1B4B]">AI 助手</span>
+              <SparkIcon className="w-5 h-5" />
+              <span className="text-[15px] font-semibold text-[var(--ink)]">AI 助手</span>
             </div>
             <button
               onClick={() => setIsOpen(false)}
               className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-[14px] text-gray-500 active:scale-90 transition-transform"
             >
-              ✕
+              <CloseIcon className="w-4 h-4" />
             </button>
           </div>
 
@@ -338,8 +374,8 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
                 <div
                   className={`max-w-[85%] px-3 py-2 rounded-[12px] text-[14px] leading-relaxed ${
                     msg.role === "user"
-                      ? "bg-[#6366F1] text-white rounded-br-[4px]"
-                      : "bg-[#F3F4F6] text-[#1E1B4B] rounded-bl-[4px]"
+                      ? "journal-chat-user text-white rounded-br-[4px]"
+                      : "journal-chat-assistant rounded-bl-[4px]"
                   }`}
                 >
                   {msg.role === "user" ? msg.content : <FormattedReply text={msg.content} />}
@@ -348,8 +384,36 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="max-w-[80%] px-3 py-2 rounded-[12px] rounded-bl-[4px] bg-[#F3F4F6] text-[14px] text-[#6B7280]">
-                  <span className="animate-pulse">正在修改行程...</span>
+                <div className="journal-chat-assistant max-w-[80%] px-3 py-2 rounded-[8px] rounded-bl-[4px] text-[14px]">
+                  <span className="animate-pulse">正在整理修改方案...</span>
+                </div>
+              </div>
+            )}
+            {pendingUpdate && (
+              <div className="journal-chat-proposal rounded-[7px] border border-[var(--line-strong)] bg-[var(--paper)] p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--khaki-dark)]" />
+                  <span className="text-[13px] font-semibold text-[var(--ink)]">待确认的修改</span>
+                </div>
+                <div className="text-[12px] leading-relaxed text-[var(--ink-soft)]">
+                  <FormattedReply text={pendingUpdate.summary} />
+                </div>
+                <p className="mt-2 text-[11px] text-[var(--ink-muted)]">确认前，当前行程不会发生变化。</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelUpdate}
+                    className="journal-action h-9 rounded-[6px] text-[13px] font-medium"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmUpdate}
+                    className="journal-primary h-9 rounded-[6px] text-[13px] font-medium"
+                  >
+                    确认修改
+                  </button>
                 </div>
               </div>
             )}
@@ -357,12 +421,12 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
           </div>
 
           {/* 输入框 */}
-          <div className="px-4 py-3 border-t border-[rgba(99,102,241,0.08)] bg-white">
+          <div className="px-4 py-3 border-t border-[var(--line)] bg-[var(--paper-light)]">
             {voiceHint && (
               <div className={`mb-2 inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium ${
-                isListening ? "bg-[rgba(99,102,241,0.1)] text-[#6366F1]" : "bg-[#F3F4F6] text-[#6B7280]"
+                isListening ? "bg-[var(--paper-deep)] text-[var(--ink)]" : "bg-[var(--paper)] text-[var(--ink-soft)]"
               }`}>
-                {isListening && <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-pulse" />}
+                {isListening && <span className="w-1.5 h-1.5 rounded-full bg-[var(--ink)] animate-pulse" />}
                 <span className="truncate">{voiceHint}</span>
               </div>
             )}
@@ -372,9 +436,9 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
                 value={input}
                 onChange={(e) => setInput(e.target.value.slice(0, 300))}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder="说说要改什么..."
-                className="min-w-0 flex-1 h-[42px] px-3 rounded-[12px] bg-[#F9FAFB] border border-[rgba(99,102,241,0.08)] text-[14px] text-[#1E1B4B] placeholder-[#9CA3AF] outline-none focus:border-[#6366F1] transition-colors"
-                disabled={loading}
+                placeholder={pendingUpdate ? "请先确认或取消本次修改" : "说说要改什么..."}
+                className="min-w-0 flex-1 h-[42px] px-3 rounded-[7px] bg-[var(--paper)] border border-[var(--line)] text-[14px] text-[var(--ink)] outline-none focus:border-[var(--ink)] transition-colors"
+                disabled={loading || Boolean(pendingUpdate)}
               />
               <button
                 type="button"
@@ -391,20 +455,21 @@ export default function ChatBubble({ plan, onPlanUpdate }: ChatBubbleProps) {
                 onPointerLeave={() => stopVoiceInput()}
                 onPointerCancel={() => stopVoiceInput()}
                 onContextMenu={(e) => e.preventDefault()}
-                disabled={loading}
-                className={`w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-[15px] transition-all active:scale-95 disabled:opacity-40 ${
+                disabled={loading || Boolean(pendingUpdate)}
+                data-listening={isListening}
+                className={`journal-mic w-[42px] h-[42px] rounded-[12px] flex items-center justify-center text-[15px] transition-all active:scale-95 disabled:opacity-40 ${
                   isListening
-                    ? "bg-[#6366F1] text-white shadow-[0_0_0_6px_rgba(99,102,241,0.12)]"
-                    : "bg-[#F4F3FF] text-[#6366F1] hover:bg-[#ECEBFF]"
+                    ? "text-white"
+                    : "text-[var(--ink)]"
                 }`}
               >
-                🎙
+                <MicIcon className="w-[18px] h-[18px]" />
               </button>
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || loading}
-                className="h-[42px] px-4 rounded-[12px] text-white text-[14px] font-medium disabled:opacity-40 active:scale-95 transition-all"
-                style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}
+                disabled={!input.trim() || loading || Boolean(pendingUpdate)}
+                className="journal-primary h-[42px] px-4 rounded-[12px] text-white text-[14px] font-medium disabled:opacity-40 active:scale-95 transition-all"
+                style={{ background: "var(--ink)" }}
               >
                 发送
               </button>

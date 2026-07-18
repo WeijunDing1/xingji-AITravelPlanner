@@ -10,11 +10,11 @@ interface BudgetViewProps {
 }
 
 const BUDGET_CATEGORIES = [
-  { key: "transport", label: "交通", icon: "🚗", color: "#6366F1", types: ["transport"] },
-  { key: "accommodation", label: "住宿", icon: "🏨", color: "#8B5CF6", types: ["hotel"] },
-  { key: "food", label: "餐饮", icon: "🍜", color: "#F59E0B", types: ["restaurant"] },
-  { key: "tickets", label: "门票", icon: "🎫", color: "#10B981", types: ["attraction"] },
-  { key: "other", label: "其他", icon: "🛍", color: "#9CA3AF", types: [] },
+  { key: "transport", label: "交通", icon: "01", color: "#2f2b25", types: ["transport"] },
+  { key: "accommodation", label: "住宿", icon: "02", color: "#6f604d", types: ["hotel"] },
+  { key: "food", label: "餐饮", icon: "03", color: "#a4814e", types: ["restaurant"] },
+  { key: "tickets", label: "门票", icon: "04", color: "#747963", types: ["attraction"] },
+  { key: "other", label: "其他", icon: "05", color: "#aaa08e", types: [] },
 ] as const;
 
 interface DetailItem {
@@ -142,14 +142,14 @@ export default function BudgetView({ budget, days, travelers }: BudgetViewProps)
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#FAFBFE] px-5 pt-6 pb-10">
+    <div className="journal-screen journal-budget flex-1 overflow-y-auto px-5 pt-6 pb-10">
       {/* 总预算 */}
-      <div className="text-center mb-8">
-        <div className="text-[14px] text-[#6B7280] mb-1">总预算</div>
-        <div className="text-[32px] font-bold text-[#F59E0B] tabular-nums leading-none mb-2">
+      <div className="journal-budget-summary text-center mb-8">
+        <div className="text-[14px] text-[var(--ink-soft)] mb-1">总预算</div>
+        <div className="journal-budget-total text-[34px] font-bold tabular-nums leading-none mb-2">
           ¥{displayTotal.toLocaleString()}
         </div>
-        <div className="text-[13px] text-[#6B7280]">
+        <div className="text-[13px] text-[var(--ink-soft)]">
           {travelers && travelers > 1
             ? `人均 ¥${Math.round(budget.total / travelers).toLocaleString()}`
             : ""}
@@ -157,30 +157,30 @@ export default function BudgetView({ budget, days, travelers }: BudgetViewProps)
       </div>
 
       {/* 环形图 */}
-      <div className="bg-white rounded-[20px] p-6 shadow-[0_1px_3px_rgba(99,102,241,0.04),0_4px_12px_rgba(99,102,241,0.06)] mb-6 flex flex-col items-center">
-        <div className="relative w-[180px] h-[180px] flex items-center justify-center mb-6">
+      <div className="journal-budget-overview p-6 mb-6 flex flex-col items-center">
+        <div className="journal-budget-ring relative w-[166px] h-[166px] flex items-center justify-center mb-6">
           <div
             className="absolute inset-0 rounded-full"
             style={{ background: `conic-gradient(${gradientStops})`, ...maskStyle }}
           />
-          <div className="absolute w-[120px] h-[120px] bg-white rounded-full flex flex-col items-center justify-center shadow-[inset_0_2px_8px_rgba(0,0,0,0.04)]">
-            <span className="text-[12px] text-[#9CA3AF] mb-0.5">预估花费</span>
-            <span className="text-[16px] font-bold text-[#1E1B4B]">
+          <div className="journal-budget-ring-center absolute w-[112px] h-[112px] rounded-full flex flex-col items-center justify-center">
+            <span className="text-[12px] text-[var(--ink-muted)] mb-0.5">预估花费</span>
+            <span className="text-[16px] font-bold text-[var(--ink)]">
               ¥{budget.total.toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* 图例 */}
-        <div className="w-full space-y-3">
+        <div className="journal-budget-legend w-full space-y-3">
           {items.map((item) => (
             <div key={item.key} className="flex items-center justify-between text-[13px]">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-[#1E1B4B] font-medium">{item.label}</span>
+                <span className="text-[var(--ink)] font-medium">{item.label}</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[#6B7280]">¥{item.amount.toLocaleString()}</span>
+                <span className="text-[var(--ink-soft)]">¥{item.amount.toLocaleString()}</span>
                 <span className="w-9 text-right font-medium" style={{ color: item.color }}>
                   {item.percent}%
                 </span>
@@ -191,19 +191,19 @@ export default function BudgetView({ budget, days, travelers }: BudgetViewProps)
       </div>
 
       {/* 明细列表 */}
-      <div className="space-y-3">
+      <div className="journal-budget-details space-y-3">
         {items.map((item) => (
-          <div key={item.key} className="bg-white rounded-[16px] overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+          <div key={item.key} className="overflow-hidden">
             <button
               onClick={() => setExpanded((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
               className="w-full flex items-center justify-between p-4 active:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <span className="text-[18px]">{item.icon}</span>
-                <span className="text-[15px] font-semibold text-[#1E1B4B]">{item.label}</span>
+                <span className="w-7 h-7 rounded-full border border-[var(--line-strong)] flex items-center justify-center text-[10px] font-semibold">{item.icon}</span>
+                <span className="text-[15px] font-semibold text-[var(--ink)]">{item.label}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[15px] font-semibold text-[#1E1B4B]">
+                <span className="text-[15px] font-semibold text-[var(--ink)]">
                   ¥{item.amount.toLocaleString()}
                 </span>
                 <svg
@@ -223,23 +223,23 @@ export default function BudgetView({ budget, days, travelers }: BudgetViewProps)
                   item.details.map((detail, idx) => (
                     <div key={idx} className="flex items-center justify-between text-[13px]">
                       <div className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-[#9CA3AF]" />
-                        <span className="text-[#6B7280]">
+                        <span className="w-1 h-1 rounded-full bg-[var(--ink-muted)]" />
+                        <span className="text-[var(--ink-soft)]">
                           {detail.day > 0 && (
-                            <span className="inline-block bg-[#F3F4F6] text-[#6B7280] text-[11px] px-1.5 py-0.5 rounded mr-1.5">
+                            <span className="inline-block bg-[var(--paper-deep)] text-[var(--ink-soft)] text-[11px] px-1.5 py-0.5 rounded mr-1.5">
                               Day{detail.day}
                             </span>
                           )}
                           {detail.name}
                         </span>
                       </div>
-                      <span className="text-[#1E1B4B] font-medium tabular-nums">
+                      <span className="text-[var(--ink)] font-medium tabular-nums">
                         {detail.cost > 0 ? `¥${detail.cost.toLocaleString()}` : "—"}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-[13px] text-[#9CA3AF]">暂无明细</div>
+                  <div className="text-[13px] text-[var(--ink-muted)]">暂无明细</div>
                 )}
               </div>
             </div>
